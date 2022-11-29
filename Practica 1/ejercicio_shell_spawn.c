@@ -1,0 +1,52 @@
+/**
+ * @file ejercicio_shell_spawn.c
+ * @author Rubén García de la Fuente ruben.garciadelafuente@estudiante.uam.es
+ * @author Elena Cano Castillejo, elena.canoc@estudiante.uam.es
+ * @group 2202
+ * @date 21-02-2020
+ *
+ * @brief Este programa implementa una shell sencilla en la que cada comando se le pasará por
+ * cada linea, la shell termina cuando se introduce EOF por pantalla.
+ *
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <spawn.h>
+#include <wordexp.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+int main(int argc, char** argv) {
+    int status=0;
+    char* command=NULL;
+    int tam;
+    size_t size=0;
+    wordexp_t p;
+    pid_t pid;
+
+    /*En este bucle leemos los comandos*/
+    while((tam=getline(&command, &size, stdin))!=EOF) {
+        command[tam-1]='\0';
+
+        /*Dividimos los argumentos del comando*/
+        wordexp(command, &p, 0);
+        /*Ejecutamos nuevo programa*/
+        status=posix_spawnp(&pid, p.we_wordv[0], NULL, NULL, p.we_wordv, NULL);
+
+        if(status == 0) {
+            /*Comprobamos el estatus de retorno del proceso hijo*/
+            wait(&status);
+            if (WIFEXITED(status)) {
+                fprintf(stderr, "\nExited with value %d\n\n", WEXITSTATUS(status));
+            }
+            if (WIFSIGNALED(status)) {
+                fprintf(stderr, "\nTerminated by signal %d\n\n", WTERMSIG(status));
+            }
+        }
+    }
+    free(command);
+    exit(EXIT_SUCCESS);
+}
